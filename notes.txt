@@ -1,0 +1,5 @@
+clerk setup
+    env variables setup in app
+postgress - neon db setup
+    users table setup in that 
+geoapify -- (map) setup
