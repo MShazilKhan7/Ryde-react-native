@@ -1,4 +1,12 @@
-import { StyleSheet, Text, View, ScrollView, Image, Alert } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  Image,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState } from "react";
 import { icons, images } from "@/constants";
@@ -9,6 +17,8 @@ import { useSignUp } from "@clerk/clerk-expo";
 import OAuth from "@/components/OAuth";
 import ReactNativeModal from "react-native-modal";
 import { fetchAPI } from "@/lib/fetch";
+import { createUser } from "@/api/api";
+import { useFetchData } from "@/api/useFetchData";
 
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -22,12 +32,16 @@ const SignUp = () => {
     email: "",
     password: "",
   });
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loading, setLoading] = useState(false); // Loading state
 
   const onSignUpPress = async () => {
     if (!isLoaded) {
       return;
     }
+
+    setLoading(true); // Start loading
     try {
       await signUp.create({
         emailAddress: form.email,
@@ -43,29 +57,41 @@ const SignUp = () => {
     } catch (err: any) {
       Alert.alert("error", err?.errors?.[0]?.message);
       console.error(JSON.stringify(err, null, 2));
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
+
   const onPressVerify = async () => {
     if (!isLoaded) return;
+
+    setLoading(true); // Start loading
 
     try {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
         code: verification.code,
       });
-      // completeSignUp holds the value after user is registered.
+
+      // Check if verification is successful
       if (completeSignUp.status === "complete") {
-        // user created in clerk client
-        // save to database in NEON DB
-          
-        await fetchAPI("/(api)/user", {
-          method: "POST",
-          body: JSON.stringify({
-            name: form.name,
-            email: form.email,
-            clerkId: completeSignUp.createdUserId,
-          }),
-        });
+        // Create the user in your system
+        console.log("verification complete...");
+        const userData = {
+          name: form.name,
+          email: form.email,
+          clerkId: completeSignUp.createdUserId!,
+        };
+
+        await useFetchData(createUser, userData, [
+          form.email,
+          form.name,
+          form.password,
+        ]);
+
+        // Set the session
         await setActive({ session: completeSignUp.createdSessionId });
+
+        // Set success state
         setVerification({ ...verification, state: "success" });
       } else {
         setVerification({
@@ -73,15 +99,16 @@ const SignUp = () => {
           state: "failed",
           error: "Verification Failed",
         });
-        console.error(JSON.stringify(completeSignUp, null, 2));
       }
     } catch (err: any) {
       setVerification({
         ...verification,
-        error: err[0].errors.longMessage,
+        error: err[0]?.errors?.longMessage || "An error occurred",
         state: "failed",
       });
       console.error(JSON.stringify(err, null, 2));
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -124,7 +151,11 @@ const SignUp = () => {
             className="mt-10"
             onPress={onSignUpPress}
           />
-          {/* oAuth -- third party logins */}
+
+          {/* Show loading spinner if loading state is true */}
+          {loading && <ActivityIndicator size="large" color="#0000ff" />}
+
+          {/* OAuth -- third party logins */}
           <OAuth />
           <Text className="text-center mt-10 text-general-200">
             Already have an account?{" "}
@@ -136,7 +167,7 @@ const SignUp = () => {
             </Link>
           </Text>
         </View>
-        {/* verification model. */}
+        {/* Verification modal */}
         <ReactNativeModal
           isVisible={verification.state === "pending"}
           onBackdropPress={() =>
@@ -177,6 +208,8 @@ const SignUp = () => {
             />
           </View>
         </ReactNativeModal>
+
+        {/* Success Modal */}
         <ReactNativeModal isVisible={showSuccessModal}>
           <View className="bg-white px-7 py-9 rounded-2xl min-h-[300px]">
             <Image

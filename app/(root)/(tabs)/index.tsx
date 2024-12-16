@@ -16,8 +16,10 @@ import Map from "@/components/Map";
 import { useLocationStore } from "@/store";
 import { useEffect, useState } from "react";
 import { router } from "expo-router";
-
-const recentRides = [
+import { neon } from "@neondatabase/serverless";
+import { getDrivers } from "@/api/api";
+import { useFetchData } from "@/api/useFetchData";
+export const recentRides = [
   {
     ride_id: "1",
     origin_address: "Kathmandu, Nepal",
@@ -125,6 +127,7 @@ const recentRides = [
 ];
 
 export default function Home() {
+  const { data: drivers, loading, error, refetch } = useFetchData(getDrivers);
   const { setUserLocation, setDestinationLocation } = useLocationStore();
   const { user } = useUser();
   const [permissions, setHasPermissions] = useState(false);
@@ -155,7 +158,8 @@ export default function Home() {
         address: `${address[0].name}, ${address[0].region}`,
       });
     })();
-  }, []);
+    console.log("drivers from useFetchData", drivers);
+  }, [drivers]);
 
   const handleSignOut = () => {};
   // destination address storing.
@@ -195,20 +199,27 @@ export default function Home() {
                 icon={icons.search}
                 containerStyle="bg-white shadow-md shadow-neutral-300"
               />
-              <>
-                <Text className="text-xl font-JakartaBold mt-5 mb-3">
-                  Your Current Location
-                </Text>
-                <Link href={"/(root)/find-ride"}>find a ride</Link>
-                <View className="flex flex-row items-center bg-transparent h-[300px]">
-                  <Map />
-                </View>
-              </>
-              <>
-                <Text className="text-xl font-JakartaBold mt-5 mb-3">
-                  Recent Rides
-                </Text>
-              </>
+              <Text className="text-xl font-JakartaBold mt-5 mb-3">
+                Your Current Location
+              </Text>
+              <Link
+                href={"/(root)/find-ride"}
+                onPress={() => {
+                  handleDestinationPress({
+                    latitude: 24.95374619531089,
+                    longitude: 67.053884816,
+                    address: "Noth Nazimabad",
+                  });
+                }}
+              >
+                find a ride
+              </Link>
+              <View className="flex flex-row items-center bg-transparent h-[300px]">
+                <Map />
+              </View>
+              <Text className="text-xl font-JakartaBold mt-5 mb-3">
+                Recent Rides
+              </Text>
             </View>
           );
         }}
