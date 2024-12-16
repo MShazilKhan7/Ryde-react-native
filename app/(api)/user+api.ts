@@ -1,10 +1,14 @@
 import { neon } from "@neondatabase/serverless";
 
+console.log("hello post func file");
+
 export async function POST(request: Request) {
   console.log("hello post func");
+  console.log(process.env.DATABASE_URL);
+
   try {
     console.log(process.env.DATABASE_URL);
-    const sql = neon(`${process.env.DATABASE_URL}`);
+    const sql = neon(process.env.DATABASE_URL!);
     const { name, email, clerkId } = await request.json();
 
     if (!name || !email || !clerkId) {
